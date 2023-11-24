@@ -3,7 +3,8 @@ import json
 from collections import Counter
 
 train_filename = 'output2.json'
-target_filename = 'freq_dict_PY.pickle'
+freq_dict_filename = 'freq_dict_PY.pickle'
+terminal_dict_filename = 'terminal_dict_PY.pickle'
 
 freq_dict = Counter()
 terminal_num = set()
@@ -19,16 +20,43 @@ def process(filename):
                 terminal_num.add(value)
                 freq_dict[value] += 1
 
+def get_terminal_dict(vocab_size, freq_dict, total_length, verbose=False):
+    terminal_dict = dict()
+    sorted_freq_dict = sorted(freq_dict.items(), key=lambda x: x[1], reverse=True)
 
-def save(filename):
+    if vocab_size > len(sorted_freq_dict):
+        vocab_size = len(sorted_freq_dict)
+
+    if verbose:
+        for i in range(vocab_size):
+            print('the %d frequent terminal: %s, its frequency: %.1f' % (
+                i, sorted_freq_dict[i][0], float(sorted_freq_dict[i][1]) / total_length))
+
+    new_freq_dict = sorted_freq_dict[:vocab_size]
+
+    for i, (terminal, frequent) in enumerate(new_freq_dict):
+        terminal_dict[terminal] = i
+
+    return terminal_dict, sorted_freq_dict
+
+def save(filename, freq_dict, terminal_num):
     with open(filename, 'wb') as f:
         sv = {'freq_dict': freq_dict, 'terminal_num': terminal_num}
         pickle.dump(sv, f)
 
+def save1(filename, terminal_dict, terminal_num, sorted_freq_dict):
+  with open(filename, 'wb') as f:
+    sv = {'terminal_dict': terminal_dict,'terminal_num': terminal_num, 'vocab_size': vocab_size, 'sorted_freq_dict': sorted_freq_dict,}
+    pickle.dump(sv, f)
+
 
 if __name__ == '__main__':
     process(train_filename)
-    save(target_filename)
-    print(freq_dict['EMPTY'])
-    print(freq_dict.most_common(10))
-    print(terminal_num)
+    save(freq_dict_filename, freq_dict, terminal_num)
+
+    vocab_size = 10000
+    total_length = sum(freq_dict.values())
+
+    terminal_dict, sorted_freq_dict = get_terminal_dict(vocab_size, freq_dict, total_length, True)
+    save1(terminal_dict_filename, terminal_dict, terminal_num, sorted_freq_dict)
+    print(freq_dict)

@@ -1,0 +1,10 @@
+base model - single layer LSTM, unrolling length 50, 1500 hidden units
+cross entropy loss function
+mini-batch SGD with Adam, initial learning rate 0.001, decay by 0.6 after each epoch
+gradients norm clipped to 5
+attention window size 50
+batch size 128
+8 epochs
+run 3 times, average the results
+
+3 options: vanilla, attentional, pointer mixture

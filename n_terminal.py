@@ -12,6 +12,7 @@ num_type = 0
 dic_id = dict()
 empty = set()
 
+
 def process(filename):
     corpus_n = []
     corpus_parent = []
@@ -54,8 +55,10 @@ def process(filename):
 
     return corpus_n, corpus_parent
 
+
 def map_dense_id(data):
     return [[dic_id[i] if i in dic_id else dic_id.setdefault(i, len(dic_id)) for i in line_id] for line_id in data]
+
 
 def save(filename, type_dict, num_type, dic_id, vocab_size, train_data, train_parent, empty_set):
     with open(filename, 'wb') as f:
@@ -65,6 +68,7 @@ def save(filename, type_dict, num_type, dic_id, vocab_size, train_data, train_pa
             'train_parent': train_parent,
         }
         pickle.dump(save_data, f)
+
 
 if __name__ == '__main__':
     train_data, train_parent = process(train_filename)

@@ -24,6 +24,7 @@ def search_and_download(query, language="python"):
         "q": f"{query} extension:py language:{language}",
         "sort": "stars",
         "order": "desc",
+        "per_page": 100,
     }
 
     response = requests.get(api_url, headers=headers, params=params)
@@ -44,4 +45,4 @@ def search_and_download(query, language="python"):
 
 
 if __name__ == "__main__":
-    search_and_download("machine learning")
+    search_and_download("neural network tensorflow")

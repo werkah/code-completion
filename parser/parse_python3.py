@@ -63,7 +63,7 @@ def parse_file(filename):
             json_node["value"] = str(node.arg)
 
         # Process children.
-        if isinstance(node, ast.For):
+        elif isinstance(node, ast.For):
             children.append(traverse(node.target))
             children.append(traverse(node.iter))
             children.append(traverse_list(node.body, "body"))

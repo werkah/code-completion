@@ -11,8 +11,8 @@ target_filename = 'PY_terminal_whole.pickle'
 
 def restore_term_dict(filename):
     with open(filename, 'rb') as f:
-        save = pickle.load(f)
-        return save['terminal_dict'], save['terminal_num'], save['vocab_size']
+        terminal_data_dict = pickle.load(f)
+        return terminal_data_dict['terminal_dict'], terminal_data_dict['terminal_num'], terminal_data_dict['vocab_size']
 
 
 
@@ -56,7 +56,7 @@ def process(filename, terminal_dict, unk_id, attn_size):
         return terminal_corpus
 
 
-def save(filename, terminal_dict, terminal_num, vocab_size, attn_size, train_data):
+def save_terminal_data(filename, terminal_dict, terminal_num, vocab_size, attn_size, train_data):
     with open(filename, 'wb') as f:
         save = {'terminal_dict': terminal_dict,
                 'terminal_num': terminal_num,
@@ -72,5 +72,5 @@ if __name__ == '__main__':
     attn_size = 10
     terminal_dict, terminal_num, vocab_size = restore_term_dict(terminal_dict_filename)
     train_data = process(train_filename, terminal_dict, vocab_size, attn_size=attn_size)
-    save(target_filename, terminal_dict, terminal_num, vocab_size, attn_size, train_data)
+    save_terminal_data(target_filename, terminal_dict, terminal_num, vocab_size, attn_size, train_data)
     print(train_data)

@@ -1,3 +1,5 @@
+# Function: get the frequency of each terminal(including empty values) and the dictionary of terminal and its id
+
 import pickle
 import json
 from collections import Counter
@@ -54,9 +56,13 @@ if __name__ == '__main__':
     process(train_filename)
     save(freq_dict_filename, freq_dict, terminal_num)
 
-    vocab_size = 10000
+    #determinate how many terminals(unique) are in the vocabulary
+    vocab_size = 10
     total_length = sum(freq_dict.values())
 
     terminal_dict, sorted_freq_dict = get_terminal_dict(vocab_size, freq_dict, total_length, True)
     save1(terminal_dict_filename, terminal_dict, terminal_num, sorted_freq_dict)
     print(freq_dict)
+    print(terminal_dict)
+    print(terminal_num)
+    print(sorted_freq_dict)

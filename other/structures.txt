@@ -1,0 +1,12 @@
+n_terminal.py: create pickle file with info about a size of vocabulary, list with distances between parent and child nodes, list with mapped ids
+PY_non_terminal.pickle:'vocab_size', 'train_data', 'train_parent'
+
+frequency.py: create pickle file with info about frequency of terminals and dictionary with terminals
+freq_dict_PY.pickle: 'freq_dict', 'terminal_num'
+terminal_dict_PY.pickle: 'terminal_dict', 'terminal_num', 'vocab_size', 'sorted_freq_dict'
+
+terminal_corpus.py: create pickle file with terminal corpus which is a list of lists with terminal ids("terminal" with children is 0), we are using attention window to determine the size of the context
+PY_terminal_whole.pickle: 'terminal_dict', 'terminal_num', 'vocab_size', 'attn_size', 'train_data'
+
+length.py: get info about length of json file
+

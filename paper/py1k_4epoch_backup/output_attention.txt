@@ -1,0 +1,10 @@
+
+ Wed Dec 20 16:02:42 2023
+start a new experiment output_attention.txt
+Using dataset PY_non_terminal.pickle and PY_terminal_whole.pickle
+Epoch: 1 Train Perplexity: 1.003 Train Accuracy: 0.524
+Epoch: 2 Train Perplexity: 1.002 Train Accuracy: 0.576
+Epoch: 3 Train Perplexity: 1.002 Train Accuracy: 0.605
+Epoch: 4 Train Perplexity: 1.001 Train Accuracy: 0.629
+max step 0, max valid 0.000
+total time takes 8034.759745597839

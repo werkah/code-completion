@@ -155,7 +155,7 @@ def data_producer(
         print(f"epoch_size = {epoch_size}, batch_len = {batch_len}, num_steps = {num_steps}, batch_size = {batch_size}, ")
         epoch_size = epoch_size if epoch_size > 0 else 1
 
-        i = tf.compat.v1.train.range_input_producer(epoch_size, shuffle=False).dequeue()
+        i = next(iter(range(epoch_size)))
         per_start = time.time()
         xN = tf.strided_slice(
             dataN, [0, i * num_steps], [batch_size, (i + 1) * num_steps]

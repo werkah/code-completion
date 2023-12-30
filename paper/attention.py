@@ -1,7 +1,3 @@
-# attentional LSTM, count all unk as wrong, default predict termianl
-# what we exactly use
-# use reader_pointer_original, without parent
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -16,6 +12,8 @@ import reader_pointer_original as reader
 import os
 
 import tensorflow_addons as tfa
+
+import pickle
 
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -41,6 +39,9 @@ flags.DEFINE_bool("use_fp16", False,
 FLAGS = flags.FLAGS
 logging = tf.get_logger()
 
+with open("idx_to_terminal.pickle", "rb") as f:
+    idx_to_token = pickle.load(f)
+
 
 if FLAGS.model == "test":
     outfile = 'TESToutput.txt'
@@ -48,9 +49,7 @@ def data_type():
     return tf.float32
 
 
-class SmallConfig(object):
-    """Small config.  get best result as 0.733"""
-
+class Config:
     init_scale = 0.05
     learning_rate = 0.001
     max_grad_norm = 5
@@ -67,40 +66,11 @@ class SmallConfig(object):
     batch_size = 32  # 80
 
 
-class TestConfig(object):
-    """Tiny config, for testing."""
-
-    init_scale = 0.05
-    learning_rate = 0.001
-    max_grad_norm = 5
-    num_layers = 1
-    num_steps = 50
-    attn_size = 50
-    hidden_sizeN = 50
-    hidden_sizeT = 50
-    sizeH = 100
-    max_epoch = 1
-    max_max_epoch = 1
-    keep_prob = 1.0
-    lr_decay = 0.6
-    batch_size = 128
-
-
 def get_config():
-    return SmallConfig()
-    if FLAGS.model == "small":
-        return SmallConfig()
-    elif FLAGS.model == "medium":
-        return MediumConfig()
-    elif FLAGS.model == "best":
-        return BestConfig()
-    elif FLAGS.model == "test":
-        return TestConfig()
-    else:
-        raise ValueError("Invalid model: %s", FLAGS.model)
+    return Config()
 
 
-class PTBInput(object):
+class InputData:
     """The input data."""
 
     def __init__(self, config, data, name=None):
@@ -123,11 +93,10 @@ class PTBInput(object):
             change_yT=True,
             name=name,
         )
-        # if FLAGS.model == "test":
-        #   self.epoch_size = 16   #small epoch size for test
 
 
-class PTBModel(object):
+
+class Model:
     def __init__(self, is_training, config, input_):
         self._input = input_
         self.attn_size = attn_size = config.attn_size
@@ -138,9 +107,7 @@ class PTBModel(object):
         self.size = size = config.sizeH
         vocab_sizeN, vocab_sizeT = config.vocab_size
 
-        # Slightly better results can be obtained with forget gate biases
-        # initialized to 1 but the hyperparameters of the model would need to be
-        # different than reported in the paper.
+
         def lstm_cell():
             if (
                 "reuse"
@@ -204,30 +171,37 @@ class PTBModel(object):
             )
             inputsT = tf.nn.embedding_lookup(embeddingT, input_.input_dataT)
 
+        print(f"inputsN shape: {inputsN.shape}")
+        print(f"inputsT shape: {inputsT.shape}")
         inputs = tf.concat([inputsN, inputsT], 2)
         # inputs = tf.one_hot(input_.input_data, vocab_size)
+        print(f"inputs shape after concat: {inputs.shape}")
+
         if is_training and config.keep_prob < 1:
             inputs = tf.nn.dropout(inputs, config.keep_prob)
 
         outputs = []
         attentions = []
-        parents = []
         state = self._initial_state
         self.memory = tf.compat.v1.placeholder(
             dtype=data_type(), shape=[batch_size, num_steps, size], name="memory"
         )
         valid_memory = self.memory[:, -attn_size:, :]
-        # print ("test test test,, state shape", np.array(state).shape)
         with tf.compat.v1.variable_scope("RNN"):
             for time_step in range(num_steps):
                 if time_step > 0:
                     tf.compat.v1.get_variable_scope().reuse_variables()
-                (cell_output, state) = cell(inputs[:, time_step, :], state)
+                cell_o = cell(inputs[:, time_step, :], state)
+                print(f"cell_o shape: {cell_o[0].shape}")
+                (cell_output, state) = cell_o
                 outputs.append(cell_output)
 
-                # parent_index = input_.input_dataP[:, time_step]
-                # cell_parent = [valid_memory[i,-parent_index[i],:] for i in range(batch_size)]
-                # parents.append(tf.convert_to_tensor(cell_parent))
+                print(f"memory shape: {self.memory.shape}")
+                print(f"valid_memory shape: {valid_memory.shape}")
+                print(f"cell_output shape: {cell_output.shape}")
+                print(f"attn_size: {attn_size}")
+                print(f"size: {size}")
+                print(f"batch_size: {batch_size}")
 
                 wm = tf.compat.v1.get_variable("wm", [size, size], dtype=data_type())
                 wh = tf.compat.v1.get_variable("wh", [size, size], dtype=data_type())
@@ -253,16 +227,16 @@ class PTBModel(object):
 
         output = tf.reshape(tf.stack(axis=1, values=outputs), [-1, size])
         attention = tf.reshape(tf.stack(axis=1, values=attentions), [-1, size])
-        # parent = tf.reshape(tf.stack(axis=1, values=parents), [-1, size])
         self.output = tf.reshape(
             output, [-1, num_steps, size]
         )  # to record the memory for next batch
         wa = tf.compat.v1.get_variable("wa", [size * 2, size], dtype=data_type())
         nt = tf.tanh(tf.matmul(tf.concat([output, attention], axis=1), wa))
-
+        print(f"nt shape: {nt.shape}")
         softmax_w = tf.compat.v1.get_variable("softmax_w", [size, vocab_sizeT], dtype=data_type())
         softmax_b = tf.compat.v1.get_variable("softmax_b", [vocab_sizeT], dtype=data_type())
         logits = tf.matmul(nt, softmax_w) + softmax_b
+        print(f"!!!!!!!!!\nlogits shape: {logits.shape}")
         labels = tf.reshape(input_.targetsT, [-1])
         weights = tf.ones([batch_size * num_steps], dtype=data_type())
 
@@ -275,9 +249,6 @@ class PTBModel(object):
         new_weights = tf.where(condition_tf, zero_weights, weights)
         new_labels = tf.where(condition_tf, wrong_label, labels)
 
-        # loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
-        #     [logits], [labels], [new_weights]
-        # )
         logits_ = tf.reshape(logits, [-1, num_steps, vocab_sizeT])
         new_labels_ = tf.reshape(new_labels, [-1, num_steps])
         new_weights_ = tf.reshape(new_weights, [-1, num_steps])
@@ -290,6 +261,7 @@ class PTBModel(object):
         correct_prediction = tf.equal(
             tf.cast(tf.argmax(probs, 1), dtype=tf.int32), new_labels
         )
+        print("correct_prediction", correct_prediction.shape)
         self._accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         self._cost = cost = tf.reduce_sum(loss) / batch_size
@@ -355,7 +327,6 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     # print ('at the very initial of the run_epoch\n', state[0].c)
     eof_indicator = np.ones((model.input.batch_size), dtype=bool)
     memory = np.zeros([model.input.batch_size, model.input.num_steps, model.size])
-    # file_id = session.run(model.initial_file_id) #need to remove _
 
     fetches = {
         "cost": model.cost,
@@ -369,11 +340,8 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     for step in range(model.input.epoch_size):
         feed_dict = {}
-        # current_file_id = file_id #session.run(model.file_id)
         sub_cond = np.expand_dims(eof_indicator, axis=1)
         condition = np.repeat(sub_cond, model.size, axis=1)
-        # zero_state = np.zeros_like(condition)
-        # zero_state = np.random.uniform(-0.05,0.05,condition.shape)
         zero_state = session.run(model.initial_state)
 
         for i, (c, h) in enumerate(model.initial_state):
@@ -410,8 +378,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     print("this run_epoch takes time %.2f" % (time.time() - start_time))
     return np.exp(costs / iters), np.mean(accuracy_list)
 
-
-def main(_):
+def train():
     start_time = time.time()
     fout = open(outfile, "a")
     print("\n", time.asctime(time.localtime()), file=fout)
@@ -451,9 +418,9 @@ def main(_):
         )
 
         with tf.name_scope("Train"):
-            train_input = PTBInput(config=config, data=train_data, name="TrainInput")
+            train_input = InputData(config=config, data=train_data, name="TrainInput")
             with tf.compat.v1.variable_scope("Model", reuse=None, initializer=initializer):
-                m = PTBModel(is_training=True, config=config, input_=train_input)
+                m = Model(is_training=True, config=config, input_=train_input)
 
         # with tf.name_scope("Valid"):
         #     valid_input = PTBInput(config=config, data=valid_data, name="ValidInput")
@@ -523,6 +490,80 @@ def main(_):
               print("Saving model to %s." % FLAGS.save_path)
               save_path = saver.save(session, FLAGS.save_path)
 
+def predict(session, model, input_data):
+    state = session.run(model.initial_state)
+    feed_dict = {}
+    eof_indicator = np.ones((model.input.batch_size), dtype=bool)
+    sub_cond = np.expand_dims(eof_indicator, axis=1)
+    condition = np.repeat(sub_cond, model.size, axis=1)
+    zero_state = session.run(model.initial_state)
+
+    for i, (c, h) in enumerate(model.initial_state):
+        assert condition.shape == state[i].c.shape
+        feed_dict[c] = np.where(condition, zero_state[i][0], state[i].c)
+        feed_dict[h] = np.where(condition, zero_state[i][1], state[i].h)
+
+    memory = np.zeros([model.input.batch_size, model.input.num_steps, model.size])
+    feed_dict[model.memory] = np.array(memory)
+
+    prediction = session.run(model.output, feed_dict=feed_dict)
+    prediction = np.argmax(prediction, axis=2)
+
+    prediction_tokens = [[idx_to_token[idx] for idx in timestep] for timestep in prediction]
+    return prediction_tokens
+
+
+def main():
+    (
+        train_dataN,
+        valid_dataN,
+        vocab_sizeN,
+        train_dataT,
+        valid_dataT,
+        vocab_sizeT,
+        attn_size,
+    ) = reader.input_data(N_filename, T_filename)
+
+    train_data = (train_dataN, train_dataT)
+    valid_data = (valid_dataN, valid_dataT)
+    vocab_size = (
+        vocab_sizeN + 1,
+        vocab_sizeT + 2,
+    )
+
+    config = get_config()
+    assert (
+        attn_size == config.attn_size
+    ), f"from data {attn_size}, in model {config.attn_size}"  
+    config.vocab_size = vocab_size
+
+    with tf.Graph().as_default():
+        initializer = tf.random_uniform_initializer(
+            -config.init_scale, config.init_scale
+        )
+
+        with tf.name_scope("Predict"):
+            config.batch_size = 1
+            config.max_epoch = 1
+            config.max_max_epoch = 1
+            train_input = InputData(config=config, data=train_data, name="TrainInput")
+            with tf.compat.v1.variable_scope("Model", reuse=tf.compat.v1.AUTO_REUSE, initializer=initializer):
+                m = Model(is_training=False, config=config, input_=train_input)
+        
+        saver = tf.compat.v1.train.Saver()
+
+        with tf.compat.v1.Session() as session:
+
+            saver.restore(session, FLAGS.save_path)
+
+            new_data = {
+                'input_dataN': train_input.input_dataN,
+                'input_dataT': train_input.input_dataT,
+            }
+
+            predictions = predict(session, m, new_data)
+
+            print("Predictions", predictions)
 
 if __name__ == "__main__":
-    main(None)
+    main()

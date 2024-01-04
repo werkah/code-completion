@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Completion IDE</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-dark.min.css">
+    <style>
+        body {
+            background-color: #333;
+            color: #fff;
+        }
+
+        .container {
+            background-color: #222;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 50px;
+        }
+
+        #codeInput {
+            font-family: 'Courier New', monospace;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            margin-top: 20px;
+        }
+
+        #predictions {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Code Completion IDE</h1>
+        <textarea id="codeInput" class="form-control" rows="10"></textarea>
+        <div id="predictions"></div>
+    </div>
+
+    <div class="container">
+
+        <div class="container mt-3">
+            <div class="row">
+                <div class="col">
+                    <h4>Backend Model:</h4>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="modelType" id="charRNN" value="CharRNN"
+                            checked>
+                        <label class="form-check-label" for="charRNN">CharRNN</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="modelType" id="lstm" value="LSTM">
+                        <label class="form-check-label" for="lstm">LSTM</label>
+                    </div>
+                </div>
+                <div class="col">
+                    <h4><label for="typingInterval" class="form-label">Interval range</label></h4>
+                    <input type="range" class="form-range" min="0.5" max="2" step="0.1" id="typingInterval">
+                    <p><span id="typingIntervalValue">1</span> second</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-python.min.js"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+
+    <script defer>
+        var codeInput = document.getElementById('codeInput');
+        var predictions = document.getElementById('predictions');
+
+        var typingTimer;
+        var doneTypingInterval = document.getElementById('typingInterval').value * 1000;
+
+        document.getElementById('typingInterval').oninput = function () {
+            doneTypingInterval = this.value * 1000;
+            document.getElementById('typingIntervalValue').innerHTML = this.value;
+        }
+
+        codeInput.addEventListener('input', function () {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function () {
+                var code = codeInput.value;
+                var modelType = document.querySelector('input[name="modelType"]:checked').value;
+
+                predictions.innerHTML = `
+                <div class="spinner-border text-light" role="status" style="margin-top: 1%">
+                    <span class="sr-only">Loading...</span>
+                </div>`;
+
+                fetch('http://127.0.0.1:5000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 'code': code, 'model_type': modelType })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        var formattedPredictions = data.predictions.map(prediction => `<span class="token">${prediction}</span>`).join(' ');
+                        predictions.innerHTML = `<pre class="language-python line-numbers">${formattedPredictions}</pre>`;
+
+                        Prism.highlightAll();
+                    })
+                    .catch(error => {
+                        predictions.innerHTML = "";
+                    });
+            }, doneTypingInterval);
+        });
+
+        predictions.addEventListener('click', function (event) {
+            if (event.target && event.target.matches('span.token')) {
+                codeInput.value += event.target.innerText + ' ';
+            }
+        });
+
+    </script>
+</body>
+
+</html>

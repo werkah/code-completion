@@ -1,0 +1,23 @@
+body {
+    background-color: #333;
+    color: #fff;
+}
+
+.container {
+    background-color: #222;
+    border-radius: 5px;
+    padding: 20px;
+    margin-top: 50px;
+}
+
+#codeInput {
+    font-family: 'Courier New', monospace;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    margin-top: 20px;
+}
+
+#predictions {
+    margin-top: 10px;
+}

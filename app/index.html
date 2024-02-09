@@ -7,31 +7,9 @@
     <title>Code Completion IDE</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-dark.min.css">
-    <style>
-        body {
-            background-color: #333;
-            color: #fff;
-        }
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
 
-        .container {
-            background-color: #222;
-            border-radius: 5px;
-            padding: 20px;
-            margin-top: 50px;
-        }
-
-        #codeInput {
-            font-family: 'Courier New', monospace;
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #555;
-            margin-top: 20px;
-        }
-
-        #predictions {
-            margin-top: 10px;
-        }
-    </style>
 </head>
 
 <body>
@@ -74,57 +52,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-python.min.js"></script>
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
-
-    <script defer>
-        var codeInput = document.getElementById('codeInput');
-        var predictions = document.getElementById('predictions');
-
-        var typingTimer;
-        var doneTypingInterval = document.getElementById('typingInterval').value * 1000;
-
-        document.getElementById('typingInterval').oninput = function () {
-            doneTypingInterval = this.value * 1000;
-            document.getElementById('typingIntervalValue').innerHTML = this.value;
-        }
-
-        codeInput.addEventListener('input', function () {
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(function () {
-                var code = codeInput.value;
-                var modelType = document.querySelector('input[name="modelType"]:checked').value;
-
-                predictions.innerHTML = `
-                <div class="spinner-border text-light" role="status" style="margin-top: 1%">
-                    <span class="sr-only">Loading...</span>
-                </div>`;
-
-                fetch('http://127.0.0.1:5000/predict', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 'code': code, 'model_type': modelType })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        var formattedPredictions = data.predictions.map(prediction => `<span class="token">${prediction}</span>`).join(' ');
-                        predictions.innerHTML = `<pre class="language-python line-numbers">${formattedPredictions}</pre>`;
-
-                        Prism.highlightAll();
-                    })
-                    .catch(error => {
-                        predictions.innerHTML = `<p class="text-danger">Error: ${error}</p>`;
-                    });
-            }, doneTypingInterval);
-        });
-
-        predictions.addEventListener('click', function (event) {
-            if (event.target && event.target.matches('span.token')) {
-                codeInput.value += event.target.innerText + ' ';
-            }
-        });
-
-    </script>
 </body>
 
 </html>

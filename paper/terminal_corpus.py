@@ -4,7 +4,7 @@ import pickle
 import json
 from collections import deque
 
-terminal_dict_filename = 'terminal_dict_PY.pickle'
+terminal_dict_filename = '../terminal_dict_PY.pickle'
 train_filename = 'output2.json'
 target_filename = 'PY_terminal_whole.pickle'
 

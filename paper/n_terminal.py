@@ -4,8 +4,8 @@ import pickle
 import json
 from collections import Counter, defaultdict
 
-train_filename = 'output2.json'
-target_filename = 'PY_non_terminal.pickle'
+train_filename = '../output2.json'
+target_filename = '../PY_non_terminal.pickle'
 
 type_dict = dict()
 num_id = set()

@@ -4,9 +4,9 @@ import pickle
 import json
 from collections import Counter
 
-train_filename = 'output2.json'
+train_filename = '../output2.json'
 freq_dict_filename = 'freq_dict_PY.pickle'
-terminal_dict_filename = 'terminal_dict_PY.pickle'
+terminal_dict_filename = '../terminal_dict_PY.pickle'
 
 freq_dict = Counter()
 terminal_num = set()
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     process(train_filename)
     save(freq_dict_filename, freq_dict, terminal_num)
 
-    #determinate how many terminals(unique) are in the vocabulary
+    #determine how many terminals(unique) are in the vocabulary
     vocab_size = 10
     total_length = sum(freq_dict.values())
 
